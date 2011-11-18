@@ -15,12 +15,12 @@ require 'jeweler'
 Jeweler::Tasks.new do |gem|
   # gem is a Gem::Specification... see http://docs.rubygems.org/read/chapter/20 for more options
   gem.name = "rest_kat"
-  gem.homepage = "http://github.com/bradphelan/rest_kat"
+  gem.homepage = "http://github.com/mysugr/rest_kat"
   gem.license = "MIT"
   gem.summary = %Q{Generate objective C RestKit boilerplate code from a yaml schema}
-  gem.description = %Q{TODO: longer description of your gem}
+  gem.description = %Q{The generated source code is a layer on top of the iOS REST framework http://restkit.org/}
   gem.email = "brad.phelan@mysugr.com"
-  gem.authors = ["mySugr Apps OG"]
+  gem.authors = ["Brad Phelan"]
   # dependencies defined in Gemfile
 end
 Jeweler::RubygemsDotOrgTasks.new

@@ -1,0 +1,118 @@
+#import "<%=header%>"
+
+<%classes.each do |klass|%>
+//////////////////////////////////////////////////////////////////////////////
+//// <%= klass.objc_class %>
+//////////////////////////////////////////////////////////////////////////////
+@implementation <%= klass.objc_class %>
+
+<%klass.properties.each do |property|%>
+@synthesize <%= property.name %>;
+<%end%>
+
++ (void)initialize{
+<%if klass.resource%>
+  [self initializeRouting];
+<%end%>
+  [self initializeMapping];
+}
+
++ (void)initializeMapping{
+    RKObjectMapping* mapping = [RKObjectMapping mappingForClass:[<%=klass.objc_class%> class]];
+    NSMutableArray * dateFormatters = [NSMutableArray arrayWithCapacity:1];
+    [dateFormatters addObject:[NSDate apiDateFormatter]];
+    mapping.dateFormatters = dateFormatters;
+
+    // -------------------------------------------
+    // Define the properties mappings
+    <%klass.properties.each do |property|%> <%if not property.klass.complex? %>
+    [mapping mapKeyPath:@"<%=property.name%>" toAttribute:@"<%=property.name%>"];
+    <%end%> <%end%>
+
+    // -------------------------------------------
+    // Define the relationship mappings
+    <%klass.properties.each do |property|%> 
+    <%if property.klass.complex? %>
+    { 
+      <%if property.klass.map?%>
+        RKObjectMapping * mapper = [[RKObjectManager sharedManager].mappingProvider objectMappingForClass:[<%=property.klass.objc_class%> class]];
+        [mapping hasOne:@"<%=property.name%>" withMapping:mapper];
+      <%elsif property.klass.seq?%>
+        RKObjectMapping * mapper = [[RKObjectManager sharedManager].mappingProvider objectMappingForClass:[<%=property.klass.sequence_of.objc_class%> class]];
+        [mapping hasMany:@"<%=property.name%>" withMapping:mapper];
+      <%end%>
+    }
+    <%end%> 
+    <%end%>
+
+    // -------------------------------------------
+    // Register the mapper for the class
+    [[RKObjectManager sharedManager].mappingProvider addObjectMapping:mapping];
+
+    // -------------------------------------------
+    // Register the serializer for the class
+    [[RKObjectManager sharedManager].mappingProvider setSerializationMapping:[mapping inverseMapping] forClass:[<%=klass.objc_class%> class] ];
+}
+
+<%if klass.resource%>
++ (NSString *) resourcePath {
+  return @"<%= klass.resource.hash[:resource] %>";
+}
+
+
++ (Class) classForResource{
+  return [ <%=klass.resource.objc_resource_type%> class];
+}
+
++ (bool)isSingleton
+{
+  return <%=klass.resource.c_permission_for 's'%>;
+}
+
++ (bool)canCreate
+{
+  return <%=klass.resource.c_permission_for 'c'%>;
+}
+
++ (bool)canRead
+{
+  return <%=klass.resource.c_permission_for 'r'%>;
+}
+
++ (bool)canUpdate
+{
+  return <%=klass.resource.c_permission_for 'u'%>;
+}
+
++ (bool)canDelete
+{
+  return <%=klass.resource.c_permission_for 'd'%>;
+}
+<%end%>
+
+// <%=klass.objc_class%> convenience builder.
+// Note that +id+ field if present is not set by this
+// builder and so can be used to construct a *new* object
++ (<%=klass.objc_class%> *)buildWith_<%=klass.objc_properites_arg_list_decl%>
+{
+  <%=klass.objc_class%> * object = [[<%=klass.objc_class%> alloc] init];
+<%klass.properties.reject{|p|p.name=='id'}.each do |property|%>
+  object.<%=property.name%> = <%=property.name%>;
+<%end%>
+return object;
+}
+
+
+// Deep Copy
+- (id) copyWithZone : (NSZone * ) zone
+{
+  <%=klass.objc_class%> * object = [[<%=klass.objc_class%> allocWithZone:zone] init];
+  <%klass.properties.each do |property|%>
+    object.<%=property.name%> = [self.<%=property.name%> copy];
+  <%end%>
+  return object;
+}
+
+@end
+
+<%end%>

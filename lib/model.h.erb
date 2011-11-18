@@ -1,0 +1,60 @@
+#import <Foundation/Foundation.h>
+#import <RestKit/Restkit.h>
+#import "MSRestSerializable.h"
+
+<%classes.each do |klass|%>
+<%if klass.resource%>
+//@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@
+//@@ 
+//@@ Resource Name
+//@@ 
+//@@    <%= klass.resource.hash[:name] %>
+//@@
+//@@ Resource Type
+//@@
+//@@    <%= klass.resource.hash[:type][:name] %>
+//@@
+//@@ Resource Path
+//@@    <%= klass.resource.hash[:resource] %>
+//@@ 
+//@@ Permissions:
+//@@
+//@@    Singleton: <%= klass.resource.c_permission_for 's' %>
+//@@    Create   : <%= klass.resource.c_permission_for 'c' %>
+//@@    Read     : <%= klass.resource.c_permission_for 'r' %>
+//@@    Update   : <%= klass.resource.c_permission_for 'u' %>
+//@@    Delete   : <%= klass.resource.c_permission_for 'd' %>
+//@@
+//@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@
+<%else%>
+//////////////////////////////////////////////////////////////////////////////
+//// <%= klass.objc_class %>
+//////////////////////////////////////////////////////////////////////////////
+<%end%>
+@interface <%= klass.objc_class %> : <%= klass.objc_super_class %>
+<%klass.properties.each do |property|%>
+<%if property.klass.seq? %>
+// <%=property.name%> : <%=property.klass.json_type%> of <%=property.klass.sequence_of.objc_class%>
+<%else%>
+// <%=property.name%> : <%=property.klass.json_type%>
+<%end%>
+<%if property.klass.enum?%>
+//  Enumeration of
+<%property.klass.enum.each do |e|%>
+//    - <%=e%>
+<%end%>
+<%end%>
+<%=property.klass.objc_property_decl property.name%>;
+<%end%>
+
+// Initialize all the methods. Called by +initialize ( don't call manually )
++ (void)initializeMapping;
+
+// Static initializer ( don't call manually )
++ (void)initialize;
+
+// <%= klass.objc_class %> convenience builder.
++ (<%=klass.objc_class%> *)buildWith_<%=klass.objc_properites_arg_list_decl%>;
+@end
+
+<%end%>
