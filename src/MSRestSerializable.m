@@ -126,9 +126,6 @@
         [router routeClass:self toResourcePath:objectResource forMethod:RKRequestMethodDELETE];
     }
     
-    //Set the DateFormatter to handle our date format. this changes the dateformatting for the whole restkit framework!
-    [RKObjectMapping setPreferredDateFormatter:[NSDate apiDateFormatter]];
-    
 }
 
 

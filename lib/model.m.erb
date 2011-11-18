@@ -19,9 +19,6 @@
 
 + (void)initializeMapping{
     RKObjectMapping* mapping = [RKObjectMapping mappingForClass:[<%=klass.objc_class%> class]];
-    NSMutableArray * dateFormatters = [NSMutableArray arrayWithCapacity:1];
-    [dateFormatters addObject:[NSDate apiDateFormatter]];
-    mapping.dateFormatters = dateFormatters;
 
     // -------------------------------------------
     // Define the properties mappings
