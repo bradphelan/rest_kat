@@ -5,7 +5,7 @@
 
 Gem::Specification.new do |s|
   s.name = %q{rest_kat}
-  s.version = "0.0.1"
+  s.version = "0.0.2"
 
   s.required_rubygems_version = Gem::Requirement.new(">= 0") if s.respond_to? :required_rubygems_version=
   s.authors = [%q{Brad Phelan}]
@@ -23,9 +23,16 @@ Gem::Specification.new do |s|
     ".rvmrc",
     "Gemfile",
     "LICENSE.txt",
+    "README.md",
     "README.rdoc",
     "Rakefile",
+    "VERSION",
+    "lib/model.h.erb",
+    "lib/model.m.erb",
     "lib/rest_kat.rb",
+    "lib/tasks/iphone.rake",
+    "lib/validator.rb",
+    "rest_kat.gemspec",
     "spec/rest_kat_spec.rb",
     "spec/spec_helper.rb",
     "src/MSRestSerializable.h",
