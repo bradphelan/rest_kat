@@ -322,7 +322,7 @@ module RestKat
         src_path = File.expand_path "../../src", __FILE__
 
         src_h = File.join src_path, "MSRestSerializable.h"
-        src_m = File.join src_path, "MSRestSerializable.h"
+        src_m = File.join src_path, "MSRestSerializable.m"
 
         tgt_h = File.join api_location, "MSRestSerializable.h"
         tgt_m = File.join api_location, "MSRestSerializable.m"
