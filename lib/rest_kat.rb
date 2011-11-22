@@ -1,4 +1,4 @@
-module RestKit
+module RestKat
   class Resource
     attr_accessor :hash
     def initialize resource
@@ -308,7 +308,7 @@ module RestKat
         file_task = Rake::FileTask.define_task file => deps do
             File.open file, 'w' do |f|
                 puts "Generating #{file}"
-                f.write RestKit::IosMapping.new(schema_location).send("to_#{ext}", file)
+                f.write RestKat::IosMapping.new(schema_location).send("to_#{ext}", file)
             end
         end  
     end

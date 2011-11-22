@@ -1,6 +1,6 @@
 require 'kwalify'
 
-module RestKit
+module RestKat
   ## validator class for answers
   class Validator < Kwalify::Validator
     ## load schema definition
