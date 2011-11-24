@@ -33,7 +33,7 @@
 <%end%>
 @interface <%= klass.objc_class %> : <%= klass.objc_super_class %>
 <%klass.properties.each do |property|%>
-<%if property.klass.seq? %>
+<%if property.klass.seq_of_map? %>
 // <%=property.name%> : <%=property.klass.json_type%> of <%=property.klass.sequence_of.objc_class%>
 <%else%>
 // <%=property.name%> : <%=property.klass.json_type%>

@@ -34,7 +34,7 @@
       <%if property.klass.map?%>
         RKObjectMapping * mapper = [[RKObjectManager sharedManager].mappingProvider objectMappingForClass:[<%=property.klass.objc_class%> class]];
         [mapping hasOne:@"<%=property.name%>" withMapping:mapper];
-      <%elsif property.klass.seq?%>
+      <%elsif property.klass.seq_of_map? %>
         RKObjectMapping * mapper = [[RKObjectManager sharedManager].mappingProvider objectMappingForClass:[<%=property.klass.sequence_of.objc_class%> class]];
         [mapping hasMany:@"<%=property.name%>" withMapping:mapper];
       <%end%>

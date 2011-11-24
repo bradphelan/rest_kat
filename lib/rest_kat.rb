@@ -100,10 +100,14 @@ module RestKat
     end
 
     def map?
-      properties && (not properties.empty?)
+      self.json_type == "map"
     end
 
     def seq?
+      self.json_type == "seq"
+    end
+
+    def seq_of_map?
       !!sequence_of
     end
 
