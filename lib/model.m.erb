@@ -1,5 +1,14 @@
 #import "<%=header%>"
 
+NSManagedObjectModel * managedObjectModel(){
+    static NSManagedObjectModel * model = nil;
+    if(!model){
+        model = [[NSManagedObjectModel alloc] init];
+    }
+    return model;
+}
+
+
 <%classes.each do |klass|%>
 //////////////////////////////////////////////////////////////////////////////
 //// <%= klass.objc_class %>
@@ -15,6 +24,42 @@
   [self initializeRouting];
 <%end%>
   [self initializeMapping];
+  [self initializeCoreData];
+}
+
++ (void)initializeCoreData
+{
+    NSEntityDescription * entity = [[NSEntityDescription alloc] init];
+    entity.name = @"<%=klass.objc_class%>";
+    entity.managedObjectClassName = @"<%=klass.objc_class%>";
+
+    // -------------------------------------------
+    // Define the properties mappings
+    NSMutableArray * properties = [NSMutableArray array];
+    <%klass.properties.each do |property|%>
+    <%if not property.klass.complex? %>
+    {
+        NSAttributeDescription * attrDesc = [[NSAttributeDescription alloc] init];
+        attrDesc.name = @"<%= property.name %>";
+        [attrDesc setAttributeType:<%= property.ns_attribute_type %>];
+        [attrDesc setOptional:NO];
+        [properties addObject:attrDesc];
+    }
+    <%end%>
+    <%end%>
+    [entity setProperties:properties];
+
+    // -------------------------------------------
+    // Define the relationship mappings
+    <%klass.properties.each do |property|%> 
+    <%if property.klass.complex? %>
+    { 
+      <%if property.klass.map?%>
+      <%elsif property.klass.seq?%>
+      <%end%>
+    }
+    <%end%> 
+    <%end%>
 }
 
 + (void)initializeMapping{

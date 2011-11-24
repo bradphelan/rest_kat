@@ -76,6 +76,42 @@ module RestKat
       self.klass = klass
       self.name = name
     end
+
+    def ns_attribute_type
+        #         typedef enum {
+        #             NSUndefinedAttributeType = 0,
+        #             NSInteger16AttributeType = 100,
+        #             NSInteger32AttributeType = 200,
+        #             NSInteger64AttributeType = 300,
+        #             NSDecimalAttributeType = 400,
+        #             NSDoubleAttributeType = 500,
+        #             NSFloatAttributeType = 600,
+        #             NSStringAttributeType = 700,
+        #             NSBooleanAttributeType = 800,
+        #             NSDateAttributeType = 900,
+        #             NSBinaryDataAttributeType = 1000,
+        #             NSTransformableAttributeType = 1800,
+        #             NSObjectIDAttributeType = 2000
+        #             } NSAttributeType;
+        case self.klass.objc_class
+        when "NSNumber"
+            case self.klass.json_type
+            when "int"
+                "NSInteger32AttributeType"
+            when "float"
+                "NSFloatAttributeType"
+            when "bool"
+                "NSBooleanAttributeType"
+            end
+        when "NSDate"
+            "NSDateAttributeType"
+        when "NSString"
+            "NSStringAttributeType"
+        else
+            raise Exception.new("Unknown type #{self.klass.objc_class} for NSAttributeType to be handled for property #{self.name}" )
+        end
+        
+    end
   end
 
   class ObjCClass
@@ -300,7 +336,6 @@ module RestKat
             model.h.erb
             model.m.erb
             rest_kat.rb
-            validator.rb
         ].collect do |d|
             File.expand_path "../#{d}", __FILE__
         end
