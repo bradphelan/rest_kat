@@ -33,12 +33,12 @@
 <%end%>
 @interface <%= klass.objc_class %> : <%= klass.objc_super_class %>
 <%klass.properties.each do |property|%>
-<%if property.klass.seq_of_map? %>
-// <%=property.name%> : <%=property.klass.json_type%> of <%=property.klass.sequence_of.objc_class%>
+<%if property.klass.is_a? ObjCSequenceOfMap %>
+// <%=property.name%> : sequence of <%=property.klass.item_class.objc_class%>
 <%else%>
 // <%=property.name%> : <%=property.klass.json_type%>
 <%end%>
-<%if property.klass.enum?%>
+<%if property.klass.is_a? ObjCPrimitiveType and property.klass.enum?%>
 //  Enumeration of
 <%property.klass.enum.each do |e|%>
 //    - <%=e%>
@@ -49,7 +49,7 @@
 
 // Initialize all the methods. Called by +initialize ( don't call manually )
 + (void)initializeMapping;
-+ (void)initializeCoreData;
++ (NSEntityDescription *)initializeCoreData;
 
 // Static initializer ( don't call manually )
 + (void)initialize;

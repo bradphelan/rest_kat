@@ -114,50 +114,46 @@ module RestKat
     end
   end
 
-  class ObjCClass
-    attr_accessor :properties
-    attr_accessor :sequence_of
-    attr_accessor :type
-    attr_accessor :parent
+  class ObjCSequence
+      attr_accessor :item_class
+
+      def initialize klass
+          self.item_class = klass
+      end
+
+      def objc_property_decl name
+          "@property (nonatomic, strong) NSArray * #{name}"
+      end
+
+      def objc_property_arg_decl name
+          "#{name}: (NSArray *) #{name}"
+      end
+
+      def json_type
+          "seq"
+      end
+
+      def objc_class
+          "NSArray *"
+      end
+  end
+
+  class ObjCSequenceOfMap < ObjCSequence
+    def initialize klass
+        super klass
+    end
+  end
+
+  class ObjCSequenceOfPrimitve < ObjCSequence
+    def initialize klass
+        super klass
+    end
+  end
+
+  class ObjCType
+    attr_accessor :objc_class
     attr_accessor :json_type
     attr_accessor :node
-    attr_accessor :resource
-
-    def objc_super_class
-      if resource
-        "MSRestSerializableResource"
-      else
-        "MSRestSerializable"
-      end
-    end
-
-    def complex?
-      map? || seq?
-    end
-
-    def map?
-      self.json_type == "map"
-    end
-
-    def seq?
-      self.json_type == "seq"
-    end
-
-    def seq_of_map?
-      !!sequence_of
-    end
-
-    def objc_class
-      self.type
-    end
-
-    def enum?
-      (node["type"] == "str") && node.has_key?("enum")
-    end
-
-    def enum
-      node["enum"]
-    end
 
     def objc_property_decl name
       "@property (nonatomic, strong) #{objc_class} * #{name}"
@@ -167,17 +163,83 @@ module RestKat
       "#{name}: (#{objc_class} *) #{name}"
     end
 
+    def initialize objc_class, json_type, node
+        self.objc_class = objc_class
+        self.json_type = json_type
+        self.node = node
+    end
+  end
+
+  class ObjCPrimitiveType < ObjCType
+    attr_accessor :objc_class
+    attr_accessor :json_type
+    attr_accessor :node
+    def initialize objc_class, json_type, node
+        super objc_class, json_type, node
+    end
+
+    def enum?
+      (node["type"] == "str") && node.has_key?("enum")
+    end
+
+    def enum
+      node["enum"]
+    end
+  end
+
+  class ObjCMapType < ObjCType
+    attr_accessor :properties
+    attr_accessor :sequence_of
+    attr_accessor :resource
+
+    def primitive_properties
+        properties.select do |p|
+            p.klass.is_a? ObjCPrimitiveType
+        end
+    end
+
+    def has_one_properties
+        properties.select do |p|
+            p.klass.is_a? ObjCMapType
+        end
+    end
+
+    def has_many_properties
+        properties.select do |p|
+            p.klass.is_a? ObjCSequence
+        end
+    end
+
+    def has_many_primitives_properties
+        properties.select do |p|
+            p.klass.is_a? ObjCSequenceOfPrimitve
+        end
+    end
+
+    def has_many_maps_properties
+        properties.select do |p|
+            p.klass.is_a? ObjCSequenceOfMap
+        end
+    end
+
+    def objc_super_class
+      if resource
+        "MSRestSerializableResource"
+      else
+        "MSRestSerializable"
+      end
+    end
+
+
     def objc_properites_arg_list_decl
       properties.reject{|p| p.name == 'id'}.map do |p|
         p.klass.objc_property_arg_decl p.name
       end.join "\n   "
     end
 
-    def initialize type, json_type, node
-      self.properties = nil
-      self.type = type
-      self.json_type = json_type
-      self.node = node
+    def initialize objc_class, json_type, node
+        super objc_class, json_type, node
+        self.properties = nil
     end
 
   end
@@ -258,7 +320,7 @@ module RestKat
     end
 
     def find_processed_class node
-      classes.find{|c| c.type == node[:name]}
+      classes.find{|c| c.objc_class == node[:name]}
     end
 
     # Perform a depth first traversal of the type tree. The resulting
@@ -275,7 +337,7 @@ module RestKat
       when "map"
 
         unless klass = find_processed_class(node)
-          klass = ObjCClass.new(node[:name], node[:type], node)
+          klass = ObjCMapType.new(node[:name], node[:type], node)
 
           klass.properties = node[:mapping].collect do |property_name, property_node|
             if property_node[:type] == "map"
@@ -288,27 +350,17 @@ module RestKat
         end
 
       when "seq"
-        klass = ObjCClass.new(node[:name] || "NSArray", node[:type], node)
-        if node[:sequence].length != 1
-          raise "Only support sequence of map with one map type"
-        end
-        sequence_node = node[:sequence].first
-        if sequence_node["type"] == "map"
-          if not sequence_node["name"]
-            raise Exception.new ("sequence of map nodes must have a :name to generate the objective C types")
-          end
-          klass.sequence_of = to_objective_c_class sequence_node
-        end
+        klass = create_sequence(node)
       when "str", "text"
-        klass = ObjCClass.new(node[:name] || "NSString", node[:type], node)
+        klass = ObjCPrimitiveType.new(node[:name] || "NSString", node[:type], node)
       when "int"
-        klass = ObjCClass.new(node[:name] || "NSNumber", node[:type], node)
+        klass = ObjCPrimitiveType.new(node[:name] || "NSNumber", node[:type], node)
       when "float"
-        klass = ObjCClass.new(node[:name] || "NSNumber", node[:type], node)
+        klass = ObjCPrimitiveType.new(node[:name] || "NSNumber", node[:type], node)
       when "bool"
-        klass = ObjCClass.new(node[:name] || "NSNumber", node[:type], node)
+        klass = ObjCPrimitiveType.new(node[:name] || "NSNumber", node[:type], node)
       when "any"
-        klass = ObjCClass.new(node[:name] || "NSObject", node[:type], node)
+        klass = ObjCPrimitiveType.new(node[:name] || "NSObject", node[:type], node)
       else
         raise Exception.new("Unhandled type '#{node[:type]} for node with name #{node[:name]}")
       end
@@ -317,6 +369,20 @@ module RestKat
 
       klass
 
+    end
+
+    def create_sequence node
+        if node[:sequence].length != 1
+          raise "Only support sequence of map with one map type"
+        end
+        item_class = to_objective_c_class node[:sequence].first
+        if item_class.is_a? ObjCMapType
+            ObjCSequenceOfMap.new(item_class)
+        elsif item_class.is_a? ObjCPrimitiveType
+            ObjCSequenceOfPrimitve.new(item_class)
+        else
+            raise Exception.new "#{item_class.class} cannot be handled here"
+        end
     end
   end
 end

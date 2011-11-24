@@ -1,11 +1,11 @@
 #import "<%=header%>"
 
-NSManagedObjectModel * managedObjectModel(){
-    static NSManagedObjectModel * model = nil;
-    if(!model){
-        model = [[NSManagedObjectModel alloc] init];
+NSMutableArray * entities(){
+static NSMutableArray * _entities = nil;
+    if(!_entities){
+        _entities = [[NSMutableArray alloc] init];
     }
-    return model;
+    return _entities;
 }
 
 
@@ -24,21 +24,25 @@ NSManagedObjectModel * managedObjectModel(){
   [self initializeRouting];
 <%end%>
   [self initializeMapping];
-  [self initializeCoreData];
+  (void)[self initializeCoreData];
 }
 
-+ (void)initializeCoreData
++ (NSEntityDescription * )initializeCoreData
 {
-    NSEntityDescription * entity = [[NSEntityDescription alloc] init];
+    static NSEntityDescription * entity;
+    if(entity){
+       return entity;
+    }
+    entity = [[NSEntityDescription alloc] init];
     entity.name = @"<%=klass.objc_class%>";
     entity.managedObjectClassName = @"<%=klass.objc_class%>";
 
     // -------------------------------------------
     // Define the properties mappings
     NSMutableArray * properties = [NSMutableArray array];
-    <%klass.properties.each do |property|%>
-    <%if not property.klass.complex? %>
+    <%klass.primitive_properties.each do |property|%>
     {
+        // <%= property.name %>
         NSAttributeDescription * attrDesc = [[NSAttributeDescription alloc] init];
         attrDesc.name = @"<%= property.name %>";
         [attrDesc setAttributeType:<%= property.ns_attribute_type %>];
@@ -46,45 +50,78 @@ NSManagedObjectModel * managedObjectModel(){
         [properties addObject:attrDesc];
     }
     <%end%>
-    <%end%>
     [entity setProperties:properties];
+    [entities() addObject:entity];
 
-    // -------------------------------------------
-    // Define the relationship mappings
-    <%klass.properties.each do |property|%> 
-    <%if property.klass.complex? %>
+    // ----------------------------------------------
+    // Define 'has one' relationships
+    // ----------------------------------------------
+    <%klass.has_one_properties.each do |property|%> 
     { 
-      <%if property.klass.map?%>
-      <%elsif property.klass.seq?%>
-      <%end%>
+      // <%= property.name %>
+      NSRelationshipDescription * relDesc = [[NSRelationshipDescription alloc] init];
+      [relDesc setDestinationEntity:[<%=property.klass.objc_class%> initializeCoreData]];
+      relDesc.minCount = 1;
+      relDesc.maxCount = 1;
+      relDesc.deleteRule = NSCascadeDeleteRule;
     }
-    <%end%> 
     <%end%>
+
+    // ----------------------------------------------
+    // Define 'has many' objects relationships
+    // ----------------------------------------------
+    <%klass.has_many_maps_properties.each do |property|%> 
+    { 
+      // <%= property.name %>
+      NSRelationshipDescription * relDesc = [[NSRelationshipDescription alloc] init];
+      // Sequence of core data objects
+      [relDesc setDestinationEntity:[<%=property.klass.item_class.objc_class%> initializeCoreData]];
+      relDesc.deleteRule = NSCascadeDeleteRule;
+    }
+    <%end%>
+
+    // ----------------------------------------------
+    // Define 'has many' primitves relationships
+    // ----------------------------------------------
+    <%klass.has_many_maps_properties.each do |property|%> 
+    { 
+      // Sequence of primitives
+      // This is really a sequence of primitive
+#warning <%= property.name %> is a sequence of primitive
+    }
+    <%end%>
+
+    return entity;
 }
 
 + (void)initializeMapping{
     RKObjectMapping* mapping = [RKObjectMapping mappingForClass:[<%=klass.objc_class%> class]];
 
     // -------------------------------------------
-    // Define the properties mappings
-    <%klass.properties.each do |property|%> <%if not property.klass.complex? %>
+    // Define 'primitive' properties mappings
+    // ----------------------------------------------
+    <%klass.primitive_properties.each do |property|%> 
     [mapping mapKeyPath:@"<%=property.name%>" toAttribute:@"<%=property.name%>"];
-    <%end%> <%end%>
+    <%end%>
 
-    // -------------------------------------------
-    // Define the relationship mappings
-    <%klass.properties.each do |property|%> 
-    <%if property.klass.complex? %>
+    // ----------------------------------------------
+    // Define 'has one' relationships
+    // ----------------------------------------------
+    <%klass.has_one_properties.each do |property|%> 
     { 
-      <%if property.klass.map?%>
         RKObjectMapping * mapper = [[RKObjectManager sharedManager].mappingProvider objectMappingForClass:[<%=property.klass.objc_class%> class]];
         [mapping hasOne:@"<%=property.name%>" withMapping:mapper];
-      <%elsif property.klass.seq_of_map? %>
-        RKObjectMapping * mapper = [[RKObjectManager sharedManager].mappingProvider objectMappingForClass:[<%=property.klass.sequence_of.objc_class%> class]];
-        [mapping hasMany:@"<%=property.name%>" withMapping:mapper];
-      <%end%>
     }
-    <%end%> 
+    <%end%>
+
+    // ----------------------------------------------
+    // Define 'has many' relationships
+    // ----------------------------------------------
+    <%klass.has_many_properties.each do |property|%> 
+    { 
+        RKObjectMapping * mapper = [[RKObjectManager sharedManager].mappingProvider objectMappingForClass:[<%=property.klass.item_class.objc_class%> class]];
+        [mapping hasMany:@"<%=property.name%>" withMapping:mapper];
+    }
     <%end%>
 
     // -------------------------------------------
