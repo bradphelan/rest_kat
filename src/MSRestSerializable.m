@@ -155,12 +155,12 @@
 {
     if ([self isNew])
     {
-        NSAssert(self.canCreate, @"Object must allow create to be created");
+        NSAssert(self.class.canCreate, @"Object must allow create to be created");
         NSLog(@"Creating new object\n%@", self);
         // Save a new object
         [[RKObjectManager sharedManager] postObject:self mapResponseWith:[self _mapper] delegate:delegate];
     }else{
-        NSAssert(self.canUpdate, @"Object must allow update to be updated");
+        NSAssert(self.class.canUpdate, @"Object must allow update to be updated");
         NSLog(@"Updating object\n%@", self);
         // Update the object as it allready has an id
         [[RKObjectManager sharedManager] putObject:self mapResponseWith:[self _mapper] delegate:delegate];
