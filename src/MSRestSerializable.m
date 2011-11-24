@@ -169,8 +169,8 @@
 
 - (void)deleteWithDelegate:(id<RKObjectLoaderDelegate>)delegate
 {
-    NSAssert(self.canDelete, @"Object must allow delete to be deleted");
-    [[RKObjectManager sharedManager] deleteObject:self withDelegate:delegate];
+    NSAssert(self.class.canDelete, @"Object must allow delete to be deleted");
+    [[RKObjectManager sharedManager] deleteObject:self mapResponseWith:[self _mapper] delegate:delegate];
 }
 
 // Find an instance by id
