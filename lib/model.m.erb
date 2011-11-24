@@ -50,8 +50,6 @@ static NSMutableArray * _entities = nil;
         [properties addObject:attrDesc];
     }
     <%end%>
-    [entity setProperties:properties];
-    [entities() addObject:entity];
 
     // ----------------------------------------------
     // Define 'has one' relationships
@@ -64,6 +62,7 @@ static NSMutableArray * _entities = nil;
       relDesc.minCount = 1;
       relDesc.maxCount = 1;
       relDesc.deleteRule = NSCascadeDeleteRule;
+      [properties addObject:relDesc];
     }
     <%end%>
 
@@ -77,6 +76,7 @@ static NSMutableArray * _entities = nil;
       // Sequence of core data objects
       [relDesc setDestinationEntity:[<%=property.klass.item_class.objc_class%> initializeCoreData]];
       relDesc.deleteRule = NSCascadeDeleteRule;
+      [properties addObject:relDesc];
     }
     <%end%>
 
@@ -91,6 +91,8 @@ static NSMutableArray * _entities = nil;
     }
     <%end%>
 
+    [entity setProperties:properties];
+    [entities() addObject:entity];
     return entity;
 }
 
