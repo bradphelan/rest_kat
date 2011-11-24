@@ -101,7 +101,7 @@
     RKObjectRouter * router = [self router];
     
     NSString * collectionResource = [self resourcePath];
-    NSString * objectResource = [NSString stringWithFormat:@"%@/(id)", collectionResource];
+    NSString * objectResource = [NSString stringWithFormat:@"%@/:id", collectionResource];
     
     if([self isSingleton])
     {
