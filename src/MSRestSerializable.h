@@ -65,6 +65,9 @@
 // save the object
 -(void) saveWithDelegate:(id<RKObjectLoaderDelegate>)delegate;
 
+//delete the object
+- (void)deleteWithDelegate:(id<RKObjectLoaderDelegate>)delegate;
+
 // Find an instance by id
 + (void) find:(NSNumber *)id 
  withDelegate:(id<RKObjectLoaderDelegate>)delegate;
