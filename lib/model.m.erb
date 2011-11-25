@@ -1,12 +1,5 @@
 #import "<%=header%>"
 
-NSMutableArray * entities(){
-static NSMutableArray * _entities = nil;
-    if(!_entities){
-        _entities = [[NSMutableArray alloc] init];
-    }
-    return _entities;
-}
 
 
 <%classes.each do |klass|%>
@@ -92,7 +85,6 @@ static NSMutableArray * _entities = nil;
     <%end%>
 
     [entity setProperties:properties];
-    [entities() addObject:entity];
     return entity;
 }
 
@@ -140,11 +132,6 @@ static NSMutableArray * _entities = nil;
 <%if klass.resource%>
 + (NSString *) resourcePath {
   return @"<%= klass.resource.hash[:resource] %>";
-}
-
-
-+ (Class) classForResource{
-  return [ <%=klass.resource.objc_resource_type%> class];
 }
 
 + (bool)isSingleton
@@ -199,3 +186,16 @@ return object;
 @end
 
 <%end%>
+
+
+
+NSMutableArray * entities(){
+static NSMutableArray * _entities = nil;
+    if(!_entities){
+        _entities = [[NSMutableArray alloc] init];
+        <%classes.each do |klass|%>
+        [_entities addObject:[<%=klass.objc_class%> initializeCoreData]];
+        <%end%>
+    }
+    return _entities;
+}
