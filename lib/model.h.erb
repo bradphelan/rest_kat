@@ -31,7 +31,10 @@
 //// <%= klass.objc_class %>
 //////////////////////////////////////////////////////////////////////////////
 <%end%>
-@interface <%= klass.objc_class %> : <%= klass.objc_super_class %>
+@interface <%= klass.objc_class %> : NSObject<<%=klass.objc_protocols%>>
+
+
+
 <%klass.properties.each do |property|%>
 <%if property.klass.is_a? ObjCSequenceOfMap %>
 // <%=property.name%> : sequence of <%=property.klass.item_class.objc_class%>
@@ -49,7 +52,9 @@
 
 // Initialize all the methods. Called by +initialize ( don't call manually )
 + (void)initializeMapping;
+<%if klass.cached?%>
 + (NSEntityDescription *)initializeCoreData;
+<%end%>
 
 // Static initializer ( don't call manually )
 + (void)initialize;

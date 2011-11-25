@@ -1,5 +1,5 @@
 #import "<%=header%>"
-
+#import <objc/runtime.h>
 
 
 <%classes.each do |klass|%>
@@ -8,18 +8,41 @@
 //////////////////////////////////////////////////////////////////////////////
 @implementation <%= klass.objc_class %>
 
++ (RKObjectMapping *) mapperForParsing
+{
+    return [[RKObjectManager sharedManager].mappingProvider objectMappingForClass:self];
+}
+
++ (RKObjectMapping *) mapperForSerializing
+{
+    return [[RKObjectManager sharedManager].mappingProvider serializationMappingForClass:self];
+}
+
 <%klass.properties.each do |property|%>
 @synthesize <%= property.name %>;
 <%end%>
 
 + (void)initialize{
+  [self initializeMapping];
 <%if klass.resource%>
   [self initializeRouting];
 <%end%>
-  [self initializeMapping];
+<%if klass.cached?%>
   (void)[self initializeCoreData];
+<%end%>
 }
 
+- (NSString*)description
+{
+    RKObjectMapping * mapper = [[RKObjectManager sharedManager].mappingProvider serializationMappingForClass:[self class]];
+    RKObjectSerializer * serializer = [RKObjectSerializer serializerWithObject:self mapping:mapper];
+
+    NSError * error;
+    NSString * description = (NSString *)[serializer serializedObjectForMIMEType:RKMIMETypeJSON error: &error];
+    return [description stringByReplacingOccurrencesOfString:@"\"" withString:@"'"];
+}
+
+<%if klass.cached? %>
 + (NSEntityDescription * )initializeCoreData
 {
     static NSEntityDescription * entity;
@@ -33,7 +56,7 @@
     // -------------------------------------------
     // Define the properties mappings
     NSMutableArray * properties = [NSMutableArray array];
-    <%klass.primitive_properties.each do |property|%>
+<%klass.primitive_properties.each do |property|%>
     {
         // <%= property.name %>
         NSAttributeDescription * attrDesc = [[NSAttributeDescription alloc] init];
@@ -42,12 +65,12 @@
         [attrDesc setOptional:NO];
         [properties addObject:attrDesc];
     }
-    <%end%>
+<%end%>
 
     // ----------------------------------------------
     // Define 'has one' relationships
     // ----------------------------------------------
-    <%klass.has_one_properties.each do |property|%> 
+<%klass.has_one_properties.each do |property|%> 
     { 
       // <%= property.name %>
       NSRelationshipDescription * relDesc = [[NSRelationshipDescription alloc] init];
@@ -58,12 +81,12 @@
       relDesc.deleteRule = NSCascadeDeleteRule;
       [properties addObject:relDesc];
     }
-    <%end%>
+<%end%>
 
     // ----------------------------------------------
     // Define 'has many' objects relationships
     // ----------------------------------------------
-    <%klass.has_many_maps_properties.each do |property|%> 
+<%klass.has_many_maps_properties.each do |property|%> 
     { 
       // <%= property.name %>
       NSRelationshipDescription * relDesc = [[NSRelationshipDescription alloc] init];
@@ -73,22 +96,24 @@
       relDesc.deleteRule = NSCascadeDeleteRule;
       [properties addObject:relDesc];
     }
-    <%end%>
+<%end%>
 
     // ----------------------------------------------
     // Define 'has many' primitves relationships
     // ----------------------------------------------
-    <%klass.has_many_maps_properties.each do |property|%> 
+<%klass.has_many_maps_properties.each do |property|%> 
     { 
       // Sequence of primitives
       // This is really a sequence of primitive
 #warning <%= property.name %> is a sequence of primitive
     }
-    <%end%>
+<%end%>
 
     [entity setProperties:properties];
     return entity;
 }
+<%end%>
+
 
 + (void)initializeMapping{
     RKObjectMapping* mapping = [RKObjectMapping mappingForClass:[<%=klass.objc_class%> class]];
@@ -96,31 +121,31 @@
     // -------------------------------------------
     // Define 'primitive' properties mappings
     // ----------------------------------------------
-    <%klass.primitive_properties.each do |property|%> 
+<%klass.primitive_properties.each do |property|%> 
     [mapping mapKeyPath:@"<%=property.name%>" toAttribute:@"<%=property.name%>"];
-    <%end%>
+<%end%>
 
     // ----------------------------------------------
     // Define 'has one' relationships
     // ----------------------------------------------
-    <%klass.has_one_properties.each do |property|%> 
+<%klass.has_one_properties.each do |property|%> 
     { 
         RKObjectMapping * mapper = [[RKObjectManager sharedManager].mappingProvider 
             objectMappingForClass:[<%=property.klass.objc_class%> class]];
         [mapping hasOne:@"<%=property.name%>" withMapping:mapper];
     }
-    <%end%>
+<%end%>
 
     // ----------------------------------------------
     // Define 'has many' relationships
     // ----------------------------------------------
-    <%klass.has_many_properties.each do |property|%> 
+<%klass.has_many_properties.each do |property|%> 
     { 
         RKObjectMapping * mapper = [[RKObjectManager sharedManager].mappingProvider 
             objectMappingForClass:[<%=property.klass.item_class.objc_class%> class]];
         [mapping hasMany:@"<%=property.name%>" withMapping:mapper];
     }
-    <%end%>
+<%end%>
 
     // -------------------------------------------
     // Register the mapper for the class
@@ -136,29 +161,94 @@
   return @"<%= klass.resource.hash[:resource] %>";
 }
 
-+ (bool)isSingleton
-{
-  return <%=klass.resource.c_permission_for 's'%>;
++ (void)initializeRouting{
+    RKObjectRouter * router = [RKObjectManager sharedManager].router;
+    
+    NSString * collectionResource = [self resourcePath];
+    NSString * objectResource = [NSString stringWithFormat:@"%@/(id)", collectionResource];
+
+<%if klass.resource.create?%>
+    [router routeClass:self toResourcePath:collectionResource forMethod:RKRequestMethodPOST];
+<%end%>
+<%if klass.resource.read?%>
+    [router routeClass:self toResourcePath:objectResource forMethod:RKRequestMethodGET];
+<%end%>
+<%if klass.resource.update?%>
+    [router routeClass:self toResourcePath:objectResource forMethod:RKRequestMethodPUT];
+<%end%>
+<%if klass.resource.delete?%>
+    [router routeClass:self toResourcePath:objectResource forMethod:RKRequestMethodDELETE];
+<%end%>
+
 }
 
-+ (bool)canCreate
+- (BOOL)isNew
 {
-  return <%=klass.resource.c_permission_for 'c'%>;
+    BOOL hasId = class_getProperty([self class], [@"id" UTF8String]) != NULL;
+    return ([self valueForKey:@"id"] == NULL || !hasId);
 }
 
-+ (bool)canRead
+-(void) saveWithDelegate:(id<RKObjectLoaderDelegate>)delegate
 {
-  return <%=klass.resource.c_permission_for 'r'%>;
+    RKObjectMapping * mapper = [[RKObjectManager sharedManager].mappingProvider objectMappingForClass:[self class]];
+
+    if ([self isNew])
+    {
+        [[RKObjectManager sharedManager] postObject:self mapResponseWith:mapper delegate:delegate];
+    }else{
+        [[RKObjectManager sharedManager] putObject:self mapResponseWith:mapper delegate:delegate];
+    }
+    
 }
 
-+ (bool)canUpdate
+- (void)deleteWithDelegate:(id<RKObjectLoaderDelegate>)delegate
 {
-  return <%=klass.resource.c_permission_for 'u'%>;
+    RKObjectMapping * mapper = [[RKObjectManager sharedManager].mappingProvider objectMappingForClass:[self class]];
+    [[RKObjectManager sharedManager] deleteObject:self mapResponseWith:mapper delegate:delegate];
 }
 
-+ (bool)canDelete
++ (void) loadItem:(NSNumber *)id 
+     withDelegate:(id<RKObjectLoaderDelegate>)delegate;
 {
-  return <%=klass.resource.c_permission_for 'd'%>;
+    RKObjectMapping * mapper = [[RKObjectManager sharedManager].mappingProvider objectMappingForClass:[self class]];
+
+    <%= klass.objc_class%> * instance = [[self alloc] init];
+    [instance setValue:id forKey:@"id"];
+    [[RKObjectManager sharedManager] getObject:instance 
+                               mapResponseWith:mapper
+                                      delegate:delegate];
+}
+
+// Load collection
++ (void) loadCollectionWithDelegate:(id<RKObjectLoaderDelegate>)delegate
+{
+    RKObjectManager * objectManager = [RKObjectManager sharedManager];
+    RKObjectMapping * mapping = [objectManager.mappingProvider 
+                                 objectMappingForClass:self ];
+    
+    [objectManager loadObjectsAtResourcePath:[self resourcePath] 
+                               objectMapping:mapping 
+                                    delegate:delegate];
+}
+
+
+// Load collection with query
++ (void) loadCollectionThroughQuery:(NSObject *)mappableQueryObject 
+                       withDelegate:(id<RKObjectLoaderDelegate>)delegate
+{
+    
+    RKObjectManager * objectManager = [RKObjectManager sharedManager];
+    RKObjectMapping * mapping = [objectManager.mappingProvider
+                                 objectMappingForClass:self ];
+    
+    
+    // Append the dictionary to the resource as query parameters
+    NSString * resourcePath = RKPathAppendQueryParams([self resourcePath], convertToDictionary(mappableQueryObject));
+    
+    // Load the objects at the query
+    [objectManager loadObjectsAtResourcePath:resourcePath 
+                               objectMapping:mapping 
+                                    delegate:delegate];
 }
 <%end%>
 
@@ -179,11 +269,12 @@ return object;
 - (id) copyWithZone : (NSZone * ) zone
 {
   <%=klass.objc_class%> * object = [[<%=klass.objc_class%> allocWithZone:zone] init];
-  <%klass.properties.each do |property|%>
-    object.<%=property.name%> = [self.<%=property.name%> copy];
-  <%end%>
+<%klass.properties.each do |property|%>
+  object.<%=property.name%> = [self.<%=property.name%> copy];
+<%end%>
   return object;
 }
+
 
 @end
 
@@ -196,9 +287,11 @@ NSMutableArray * entities(){
 static NSMutableArray * _entities = nil;
     if(!_entities){
         _entities = [[NSMutableArray alloc] init];
-        <%classes.each do |klass|%>
+<%classes.each do |klass|%>
+<%if klass.cached? %>
         [_entities addObject:[<%=klass.objc_class%> initializeCoreData]];
-        <%end%>
+<%end%>
+<%end%>
     }
     return _entities;
 }

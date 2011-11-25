@@ -5,6 +5,10 @@ module RestKat
       self.hash = resource
     end
 
+    def cached?
+      self.hash[:cached]
+    end
+
     def objc_resource_type
       hash[:type][:name]
     end
@@ -117,6 +121,14 @@ module RestKat
   class ObjCSequence
       attr_accessor :item_class
 
+      def cached
+        item_class.cached
+      end
+
+      def cached=val
+        item_class.cached = val
+      end
+
       def initialize klass
           self.item_class = klass
       end
@@ -154,6 +166,7 @@ module RestKat
     attr_accessor :objc_class
     attr_accessor :json_type
     attr_accessor :node
+    attr_accessor :cached
 
     def objc_property_decl name
       "@property (nonatomic, strong) #{objc_class} * #{name}"
@@ -191,6 +204,19 @@ module RestKat
     attr_accessor :properties
     attr_accessor :sequence_of
     attr_accessor :resource
+
+    def cached?
+      cached
+    end
+
+    def cached=val
+      @cached = val
+      if properties 
+        properties.each do |property|
+          property.klass.cached = val
+        end
+      end
+    end
 
     def primitive_properties
         properties.select do |p|
@@ -230,6 +256,11 @@ module RestKat
       end
     end
 
+    def objc_protocols
+      ["NSCopying"].tap do |p|
+        p << "MSRestResource" if resource
+      end.join ', '
+    end
 
     def objc_properites_arg_list_decl
       properties.reject{|p| p.name == 'id'}.map do |p|
@@ -240,6 +271,7 @@ module RestKat
     def initialize objc_class, json_type, node
         super objc_class, json_type, node
         self.properties = nil
+        self.cached = false
     end
 
   end
@@ -290,10 +322,11 @@ module RestKat
         Resource.new(resource_hash).tap do |resource|
           # Generate the query classes first
           resource.queries.each do |query|
-            to_objective_c_class query["type"]
+            # Query objects do not get cached in core data
+            to_objective_c_class node:query["type"], cached:false
           end
           # Generate the resource classes next
-          klass = to_objective_c_class resource.hash[:type]
+          klass = to_objective_c_class node:resource.hash[:type], cached:resource.cached?
           # Mark this class as being a REST resource
           klass.resource = resource
         end
@@ -328,14 +361,20 @@ module RestKat
     # the code generation phase this classes will be injected last into
     # the code making sure the dependencies are define in the correct
     # order.
-    def to_objective_c_class node
+    def to_objective_c_class options
+
+      node = options[:node]
+      cached = options[:cached]
+      puts cached
+
       unless node
-        raise Exception.new("node is nil for name '#{name}'")
+        raise Exception.new("node is nil")
       end
 
       case node[:type]
       when "map"
 
+        puts "#{node[:name]} #{cached}"
         unless klass = find_processed_class(node)
           klass = ObjCMapType.new(node[:name], node[:type], node)
 
@@ -343,14 +382,18 @@ module RestKat
             if property_node[:type] == "map"
               property_node[:name] ||= IosMapping.obj_c_type_for_property(node, property_name)
             end
-            ObjCProperty.new(to_objective_c_class(property_node), property_name)
+            ObjCProperty.new(to_objective_c_class(node:property_node, cached:cached), property_name)
           end
 
           self.classes << klass
         end
 
+        # Inherit caching from parent as the whole object graph 
+        # of cached objects needs to go into Core Data
+        klass.cached = cached
+
       when "seq"
-        klass = create_sequence(node)
+        klass = create_sequence(node, cached)
       when "str", "text"
         klass = ObjCPrimitiveType.new(node[:name] || "NSString", node[:type], node)
       when "int"
@@ -371,11 +414,11 @@ module RestKat
 
     end
 
-    def create_sequence node
+    def create_sequence node, cached
         if node[:sequence].length != 1
           raise "Only support sequence of map with one map type"
         end
-        item_class = to_objective_c_class node[:sequence].first
+        item_class = to_objective_c_class node:node[:sequence].first, cached:cached
         if item_class.is_a? ObjCMapType
             ObjCSequenceOfMap.new(item_class)
         elsif item_class.is_a? ObjCPrimitiveType
@@ -433,11 +476,11 @@ module RestKat
         tgt_m = File.join api_location, "MSRestSerializable.m"
 
 
-        t0 = file tgt_h, src_h do
+        t0 = file tgt_h => src_h do
             cp src_h, tgt_h, :verbose => true
         end
 
-        t1 = file tgt_m, src_m do
+        t1 = file tgt_m => src_m do
             cp src_m, tgt_m, :verbose => true
         end
 
