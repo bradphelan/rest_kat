@@ -52,6 +52,7 @@
       // <%= property.name %>
       NSRelationshipDescription * relDesc = [[NSRelationshipDescription alloc] init];
       [relDesc setDestinationEntity:[<%=property.klass.objc_class%> initializeCoreData]];
+      relDesc.name = @"<%= property.name %>";
       relDesc.minCount = 1;
       relDesc.maxCount = 1;
       relDesc.deleteRule = NSCascadeDeleteRule;
@@ -66,6 +67,7 @@
     { 
       // <%= property.name %>
       NSRelationshipDescription * relDesc = [[NSRelationshipDescription alloc] init];
+      relDesc.name = @"<%= property.name %>";
       // Sequence of core data objects
       [relDesc setDestinationEntity:[<%=property.klass.item_class.objc_class%> initializeCoreData]];
       relDesc.deleteRule = NSCascadeDeleteRule;
