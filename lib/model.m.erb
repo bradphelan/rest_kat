@@ -111,7 +111,8 @@ static NSMutableArray * _entities = nil;
     // ----------------------------------------------
     <%klass.has_one_properties.each do |property|%> 
     { 
-        RKObjectMapping * mapper = [[RKObjectManager sharedManager].mappingProvider objectMappingForClass:[<%=property.klass.objc_class%> class]];
+        RKObjectMapping * mapper = [[RKObjectManager sharedManager].mappingProvider 
+            objectMappingForClass:[<%=property.klass.objc_class%> class]];
         [mapping hasOne:@"<%=property.name%>" withMapping:mapper];
     }
     <%end%>
@@ -121,7 +122,8 @@ static NSMutableArray * _entities = nil;
     // ----------------------------------------------
     <%klass.has_many_properties.each do |property|%> 
     { 
-        RKObjectMapping * mapper = [[RKObjectManager sharedManager].mappingProvider objectMappingForClass:[<%=property.klass.item_class.objc_class%> class]];
+        RKObjectMapping * mapper = [[RKObjectManager sharedManager].mappingProvider 
+            objectMappingForClass:[<%=property.klass.item_class.objc_class%> class]];
         [mapping hasMany:@"<%=property.name%>" withMapping:mapper];
     }
     <%end%>
