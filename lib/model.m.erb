@@ -191,6 +191,7 @@ return object;
 
 
 
+
 NSMutableArray * entities(){
 static NSMutableArray * _entities = nil;
     if(!_entities){
@@ -200,4 +201,18 @@ static NSMutableArray * _entities = nil;
         <%end%>
     }
     return _entities;
+}
+
+NSManagedObjectModel * managedObjectModel(){
+    static NSManagedObjectModel *mom = nil;
+ 
+    if (mom != nil) {
+        return mom;
+    }
+    
+    mom = [[NSManagedObjectModel alloc] init];
+    [mom setEntities:entities()];
+
+    return mom;
+
 }
