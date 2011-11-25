@@ -365,7 +365,6 @@ module RestKat
 
       node = options[:node]
       cached = options[:cached]
-      puts cached
 
       unless node
         raise Exception.new("node is nil")
@@ -374,7 +373,6 @@ module RestKat
       case node[:type]
       when "map"
 
-        puts "#{node[:name]} #{cached}"
         unless klass = find_processed_class(node)
           klass = ObjCMapType.new(node[:name], node[:type], node)
 

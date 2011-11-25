@@ -124,12 +124,17 @@
 <%klass.primitive_properties.each do |property|%> 
     [mapping mapKeyPath:@"<%=property.name%>" toAttribute:@"<%=property.name%>"];
 <%end%>
+<%klass.has_many_primitives_properties.each do |property|%> 
+    // NSArray of <%= property.klass.item_class.objc_class %>
+    [mapping mapKeyPath:@"<%=property.name%>" toAttribute:@"<%=property.name%>"];
+<%end%>
 
     // ----------------------------------------------
     // Define 'has one' relationships
     // ----------------------------------------------
 <%klass.has_one_properties.each do |property|%> 
     { 
+        // <%= property.name %>
         RKObjectMapping * mapper = [[RKObjectManager sharedManager].mappingProvider 
             objectMappingForClass:[<%=property.klass.objc_class%> class]];
         [mapping hasOne:@"<%=property.name%>" withMapping:mapper];
@@ -139,7 +144,7 @@
     // ----------------------------------------------
     // Define 'has many' relationships
     // ----------------------------------------------
-<%klass.has_many_properties.each do |property|%> 
+<%klass.has_many_maps_properties.each do |property|%> 
     { 
         RKObjectMapping * mapper = [[RKObjectManager sharedManager].mappingProvider 
             objectMappingForClass:[<%=property.klass.item_class.objc_class%> class]];
