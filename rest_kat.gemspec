@@ -9,7 +9,7 @@ Gem::Specification.new do |s|
 
   s.required_rubygems_version = Gem::Requirement.new(">= 0") if s.respond_to? :required_rubygems_version=
   s.authors = [%q{Brad Phelan}]
-  s.date = %q{2011-11-24}
+  s.date = %q{2011-11-28}
   s.description = %q{The generated source code is a layer on top of the iOS REST framework http://restkit.org/}
   s.email = %q{brad.phelan@mysugr.com}
   s.extra_rdoc_files = [
