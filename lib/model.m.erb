@@ -170,7 +170,7 @@
     RKObjectRouter * router = [RKObjectManager sharedManager].router;
     
     NSString * collectionResource = [self resourcePath];
-    NSString * objectResource = [NSString stringWithFormat:@"%@/(id)", collectionResource];
+    NSString * objectResource = [NSString stringWithFormat:@"%@/:id", collectionResource];
 
 <%if klass.resource.create?%>
     [router routeClass:self toResourcePath:collectionResource forMethod:RKRequestMethodPOST];
