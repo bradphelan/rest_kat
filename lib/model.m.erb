@@ -170,7 +170,11 @@
     RKObjectRouter * router = [RKObjectManager sharedManager].router;
     
     NSString * collectionResource = [self resourcePath];
+<%if klass.resource.singleton?%>
+    NSString * objectResource = collectionResource;
+<%else%>
     NSString * objectResource = [NSString stringWithFormat:@"%@/:id", collectionResource];
+<%end%>
 
 <%if klass.resource.create?%>
     [router routeClass:self toResourcePath:collectionResource forMethod:RKRequestMethodPOST];
@@ -189,20 +193,27 @@
 
 - (BOOL)isNew
 {
-    BOOL hasId = class_getProperty([self class], [@"id" UTF8String]) != NULL;
-    return ([self valueForKey:@"id"] == NULL || !hasId);
+<%if klass.resource.singleton?%>
+	return NO;
+<%else%>
+    return [self valueForKey:@"id"] == NULL;
+<%end%>
 }
 
 -(void) saveWithDelegate:(id<RKObjectLoaderDelegate>)delegate
 {
     RKObjectMapping * mapper = [[RKObjectManager sharedManager].mappingProvider objectMappingForClass:[self class]];
 
+<%if klass.resource.singleton?%>
+	[[RKObjectManager sharedManager] putObject:self mapResponseWith:mapper delegate:delegate];
+<%else%>
     if ([self isNew])
     {
         [[RKObjectManager sharedManager] postObject:self mapResponseWith:mapper delegate:delegate];
     }else{
         [[RKObjectManager sharedManager] putObject:self mapResponseWith:mapper delegate:delegate];
     }
+<%end%>
     
 }
 
