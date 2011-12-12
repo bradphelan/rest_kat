@@ -428,61 +428,64 @@ module RestKat
   end
 end
 
+require 'rake/task.rb'
+
 module RestKat 
 
-    class MySugrIphone
-        class <<self
-            def root
-                ENV["MYSUGR_IPHONE_ROOT"]
-            end
-        end
-    end
 
-    def self.generate_item(api_location, schema_location, ext)
-        deps = %w[
+    class MySugrIphone
+        include Rake::DSL
+
+        def generate_item(api_location, schema_location, ext)
+            deps = %w[
             model.h.erb
             model.m.erb
             rest_kat.rb
-        ].collect do |d|
-            File.expand_path "../#{d}", __FILE__
+            ].collect do |d|
+                File.expand_path "../#{d}", __FILE__
+            end
+
+            deps << schema_location
+
+            file = "#{api_location}.#{ext}"
+
+            file_task = Rake::FileTask.define_task file => deps do
+                File.open file, 'w' do |f|
+                    puts "Generating #{file}"
+                    f.write RestKat::IosMapping.new(schema_location).send("to_#{ext}", file)
+                end
+            end  
         end
 
-        deps << schema_location
 
-        file = "#{api_location}.#{ext}"
+        def generate_api(api_location, schema_location)
 
-        file_task = Rake::FileTask.define_task file => deps do
-            File.open file, 'w' do |f|
-                puts "Generating #{file}"
-                f.write RestKat::IosMapping.new(schema_location).send("to_#{ext}", file)
+            api_src = File.join api_location, "MSRestApiAutoGen"
+            m_file_task = generate_item(api_src, schema_location, "h")
+            h_file_task = generate_item(api_src, schema_location, "m")
+
+            src_path = File.expand_path "../../src", __FILE__
+
+            src_h = File.join src_path, "MSRestSerializable.h"
+            src_m = File.join src_path, "MSRestSerializable.m"
+
+            tgt_h = File.join api_location, "MSRestSerializable.h"
+            tgt_m = File.join api_location, "MSRestSerializable.m"
+
+
+            t0 = file tgt_h => src_h do
+                cp src_h, tgt_h, :verbose => true
             end
-        end  
+
+            t1 = file tgt_m => src_m do
+                cp src_m, tgt_m, :verbose => true
+            end
+
+            Rake::Task.define_task :type => [m_file_task, h_file_task, t0, t1]
+        end
     end
 
     def self.generate_api(api_location, schema_location)
-
-        api_src = File.join api_location, "MSRestApiAutoGen"
-        m_file_task = generate_item(api_src, schema_location, "h")
-        h_file_task = generate_item(api_src, schema_location, "m")
-
-        src_path = File.expand_path "../../src", __FILE__
-
-        src_h = File.join src_path, "MSRestSerializable.h"
-        src_m = File.join src_path, "MSRestSerializable.m"
-
-        tgt_h = File.join api_location, "MSRestSerializable.h"
-        tgt_m = File.join api_location, "MSRestSerializable.m"
-
-
-        t0 = file tgt_h => src_h do
-            cp src_h, tgt_h, :verbose => true
-        end
-
-        t1 = file tgt_m => src_m do
-            cp src_m, tgt_m, :verbose => true
-        end
-
-        Rake::Task.define_task :type => [m_file_task, h_file_task, t0, t1]
+        MySugrIphone.new.generate_api(api_location, schema_location)
     end
-
 end
