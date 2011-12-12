@@ -153,12 +153,21 @@
 <%end%>
 
     // -------------------------------------------
-    // Register the mapper for the class
-    [[RKObjectManager sharedManager].mappingProvider addObjectMapping:mapping];
+	// Register the mapper for the class
+<%if klass.resource %>
+	[[RKObjectManager sharedManager].mappingProvider 
+		registerMapping:mapping
+		withRootKeyPath:@"<%=klass.resource.item_keypath%>"];
 
+    [[RKObjectManager sharedManager].mappingProvider
+		setMapping:mapping 
+		forKeyPath:@"<%=klass.resource.collection_keypath%>"];
+<%else%>
+    [[RKObjectManager sharedManager].mappingProvider addObjectMapping:mapping];
     // -------------------------------------------
     // Register the serializer for the class
     [[RKObjectManager sharedManager].mappingProvider setSerializationMapping:[mapping inverseMapping] forClass:[<%=klass.objc_class%> class] ];
+<%end%>
 }
 
 <%if klass.resource%>
@@ -238,13 +247,10 @@
 // Load collection
 + (void) loadCollectionWithDelegate:(id<RKObjectLoaderDelegate>)delegate
 {
-    RKObjectManager * objectManager = [RKObjectManager sharedManager];
-    RKObjectMapping * mapping = [objectManager.mappingProvider 
-                                 objectMappingForClass:self ];
-    
-    [objectManager loadObjectsAtResourcePath:[self resourcePath] 
-                               objectMapping:mapping 
-                                    delegate:delegate];
+	[[RKObjectManager sharedManager] 
+			 loadObjectsAtResourcePath:[self resourcePath] 
+			                  delegate:delegate];
+								 
 }
 
 
@@ -252,19 +258,13 @@
 + (void) loadCollectionThroughQuery:(NSObject *)mappableQueryObject 
                        withDelegate:(id<RKObjectLoaderDelegate>)delegate
 {
-    
-    RKObjectManager * objectManager = [RKObjectManager sharedManager];
-    RKObjectMapping * mapping = [objectManager.mappingProvider
-                                 objectMappingForClass:self ];
-    
-    
     // Append the dictionary to the resource as query parameters
     NSString * resourcePath = RKPathAppendQueryParams([self resourcePath], convertToDictionary(mappableQueryObject));
     
     // Load the objects at the query
-    [objectManager loadObjectsAtResourcePath:resourcePath 
-                               objectMapping:mapping 
-                                    delegate:delegate];
+	[[RKObjectManager sharedManager] 
+			 loadObjectsAtResourcePath:resourcePath
+			                  delegate:delegate];
 }
 <%end%>
 

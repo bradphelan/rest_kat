@@ -21,6 +21,14 @@ module RestKat
       hash[:permissions]
     end
 
+	def collection_keypath
+	  hash[:name]
+	end
+
+	def item_keypath
+	  hash[:name].singularize
+	end
+
     def c_permission_for type
       if permissions.include? type
         "true"
